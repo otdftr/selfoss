@@ -106,6 +106,60 @@ selfoss.events.entriesToolbar = function(parent) {
             return false;
         });
 
+	// os ext 2018-12-25 "read up-to-here" / code taken from read/unread below and selfoss.markVisibleRead
+	// this is not available in fullscreen mode -> display:none in css 
+	parent.find('.entry-readuptohere').unbind('click').click( function(){
+	    var ids = [];
+            var entry = $(this).parents('.entry');
+	    // add this one - regardless of whether it is already read or not
+	    ids.push( entry.attr('data-entry-id') );
+	    entry.prevAll('.entry.unread').each( function(index, item){
+	    //entry.prevUntil("fff").each( function(index, item){
+		ids.push($(item).attr('data-entry-id'));
+	        // ids.push($(item).attr('id').substr(5));
+	    });
+	    // there will always be at least one element: the current one
+            // if (ids.length > 0) {
+	    console.log('About to delete IDs ' + ids.join() );
+
+ 	    // this is from markVisibleRead
+	
+		// show loading
+		var content = $('#content');
+		var articleList = content.html();
+		$('#content').addClass('loading').html('');
+		var hadMore = $('.stream-more').is(':visible');
+		selfoss.ui.refreshStreamButtons();
+
+		// close opened entry and list
+		selfoss.events.setHash();
+		selfoss.filterReset();
+
+	    // this is MODIFIED from markVisibleRead > reload list from server
+
+		$.ajax({
+		    url: $('base').attr('href') + 'mark',
+		    type: 'POST',
+		    dataType: 'json',
+		    data: {
+			ids: ids
+		    },
+		    success: function() {
+		 	// refresh list
+		 	selfoss.dbOnline.reloadList();
+		    },
+		    error: function(jqXHR, textStatus, errorThrown) {
+			content.html(articleList);
+			$('#content').removeClass('loading');
+			selfoss.ui.refreshStreamButtons(true, true, hadMore);
+			selfoss.events.entries();
+			selfoss.ui.showError('Can not mark all previous item: ' +
+					     textStatus + ' ' + errorThrown);
+		    }
+		});
+    
+	});
+
         // read/unread
         parent.find('.entry-unread').unbind('click').click(function() {
             var entry = $(this).parents('.entry');
